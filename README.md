@@ -12,9 +12,11 @@ state is developed and tested in Storybook.
 
 ## Install
 
-**HACS:** HACS → ⋮ → Custom repositories → add
+**Marketplace** (built into Home Assistant; HACS on older versions):
+Marketplace → ⋮ → Custom repositories → add
 `https://github.com/BrendanAnnable/ha-dashboard-ui` as **Dashboard** →
-download **HA Dashboard UI**. HACS adds the dashboard resource.
+install **HA Dashboard UI**. It adds the dashboard resource and offers each new
+release as an update.
 
 **Manually:** download `ha-dashboard-ui.js` from the
 [latest release](https://github.com/BrendanAnnable/ha-dashboard-ui/releases/latest)
@@ -112,4 +114,4 @@ releasing.
 
 Release: bump `version` in `package.json`, commit, and push a matching tag
 (`v0.2.0`). The release workflow builds the file and attaches it to a GitHub
-release, which HACS offers as an update.
+release, which the Marketplace offers as an update.
