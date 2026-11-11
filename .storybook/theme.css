@@ -1,0 +1,53 @@
+/*
+ * Home Assistant's default theme variables (frontend src/resources/theme),
+ * enough for rows to look as they do on a dashboard. Light by default; the
+ * `dark` class on <html> switches, as HA's dark mode does.
+ */
+:root {
+  --ha-font-family-body: Roboto, Noto, sans-serif;
+  --primary-color: #009ac7;
+  --primary-text-color: #141414;
+  --secondary-text-color: #5e5e5e;
+  --primary-background-color: #fafafa;
+  --card-background-color: #ffffff;
+  --divider-color: rgba(0, 0, 0, 0.12);
+  --state-icon-color: #44739e;
+  --amber-color: #ffc107;
+  --state-light-active-color: var(--amber-color);
+  --state-switch-active-color: var(--amber-color);
+  --disabled-text-color: #bdbdbd;
+  --switch-checked-color: var(--primary-color);
+  --switch-checked-track-color: rgb(223, 243, 252);
+  --switch-unchecked-track-color: rgb(243, 243, 243);
+  --switch-unchecked-border-color: rgb(152, 152, 152);
+  --switch-unchecked-button-color: rgb(94, 94, 94);
+  --ha-card-border-radius: 12px;
+  --ha-card-border-color: #e0e0e0;
+  --float-end: right;
+  color-scheme: light;
+}
+
+:root.dark {
+  --primary-text-color: #e1e1e1;
+  --secondary-text-color: #9b9b9b;
+  --primary-background-color: #111111;
+  --card-background-color: #1c1c1c;
+  --divider-color: rgba(225, 225, 225, 0.12);
+  --state-icon-color: #44739e;
+  --disabled-text-color: #6f6f6f;
+  --switch-checked-track-color: rgba(0, 154, 199, 0.25);
+  --switch-unchecked-track-color: #2a2a2a;
+  --switch-unchecked-border-color: #8a8a8a;
+  --switch-unchecked-button-color: #999999;
+  --ha-card-border-color: #2c2c2c;
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background: var(--primary-background-color);
+  color: var(--primary-text-color);
+  font-family: var(--ha-font-family-body);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
