@@ -74,3 +74,22 @@ export const DoorRelock: Story = {
     await expect(row.shadowRoot!.querySelector('.text-content')?.textContent?.trim()).toBe('Unlocked');
   },
 };
+
+/** A `timer.*` entity as `deadline_entity`: counts down while `active`, silent when `idle` or `paused`. */
+export const TimerEntity: Story = {
+  render: () =>
+    card(undefined, [
+      createRow({
+        tag: 'dash-countdown-row',
+        config: { entity: 'switch.exhaust_fan', name: 'Exhaust fan', deadline_entity: 'timer.exhaust_fan' },
+        hass: fakeHass({
+          'switch.exhaust_fan': { state: 'on', name: 'Exhaust fan' },
+          'timer.exhaust_fan': {
+            state: 'active',
+            attributes: { finishes_at: new Date(STORY_NOW + 245_000).toISOString() },
+          },
+        }),
+      }),
+    ]),
+  play: says('Off in 4m 05s'),
+};

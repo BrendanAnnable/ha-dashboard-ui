@@ -7,14 +7,19 @@ const NEEDED = ['hui-generic-entity-row', 'ha-entity-toggle'];
 
 let loading: Promise<void> | undefined;
 
-interface CardHelpers {
+export interface CardHelpers {
   createRowElement(config: { type?: string; entity: string }): HTMLElement;
+  createCardElement(config: Record<string, unknown>): HTMLElement | Promise<HTMLElement>;
+}
+
+export function getLoadCardHelpers(): (() => Promise<CardHelpers>) | undefined {
+  return (window as { loadCardHelpers?: () => Promise<CardHelpers> }).loadCardHelpers;
 }
 
 export function ensureHaRowElements(): Promise<void> {
   if (NEEDED.every((tag) => customElements.get(tag))) return Promise.resolve();
   loading ??= (async () => {
-    const load = (window as { loadCardHelpers?: () => Promise<CardHelpers> }).loadCardHelpers;
+    const load = getLoadCardHelpers();
     if (load) {
       const helpers = await load();
       helpers.createRowElement({ type: 'toggle', entity: 'switch.ha_dashboard_ui_loader' });

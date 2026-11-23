@@ -1,14 +1,15 @@
 # ha-dashboard-ui
 
-Custom rows (and, later, cards) for Home Assistant dashboards. Each one is
-drawn by Home Assistant's own row element, so it looks and behaves like a
-built-in row: same icon, toggle, tap and hold actions, more-info dialog. Every
+Custom rows and cards for Home Assistant dashboards. Each one wraps Home
+Assistant's own row or tile element, so it looks and behaves like a built-in
+one: same icon, toggle, features, tap and hold actions, more-info dialog. Every
 state is developed and tested in Storybook.
 
 | Element | What it shows |
 |---|---|
-| [`custom:dash-countdown-row`](#countdown-row) | Any entity, with a second line counting down to a timestamp sensor |
+| [`custom:dash-countdown-row`](#countdown-row) | Any entity row, with a second line counting down to a timestamp sensor or `timer.*` entity |
 | [`custom:dash-channel-row`](#channel-row) | A light or relay run by a motion-controlled channel: Motion, Presence, Fading off, or the countdown to its automatic turn-off |
+| [`custom:dash-countdown-tile`](#countdown-tile) | A built-in tile card with a live countdown (or hold label) appended to its secondary line |
 
 ## Install
 
@@ -23,12 +24,13 @@ release as an update.
 into `config/www/`, then add `/local/ha-dashboard-ui.js` as a JavaScript module
 under Settings → Dashboards → ⋮ → Resources.
 
-Both rows go inside an entities card, alongside built-in rows.
+The rows go inside an entities card alongside built-in rows; the tile card goes
+anywhere a built-in `tile` card does.
 
 ## Countdown row
 
-For anything with a timestamp sensor saying when it will next change: a towel
-rail on a timer, a door that relocks itself.
+For anything with a timestamp sensor or `timer.*` entity saying when it will
+next change: a towel rail on a timer, a door that relocks itself.
 
 ```yaml
 type: entities
@@ -43,13 +45,48 @@ entities:
 | Option | Default | |
 |---|---|---|
 | `entity` | required | The entity the row shows and toggles |
-| `deadline_entity` | required | A timestamp sensor (`device_class: timestamp`) |
+| `deadline_entity` | required | A timestamp sensor (`device_class: timestamp`) or `timer.*` entity |
 | `countdown_text` | `Off in {time}` | Second line while counting down; `{time}` reads `3m 05s` or `42s` |
 | `due_text` | `Turning off` | Second line from the deadline until a minute after it |
 
-The second line is empty when the sensor is unknown or its time is more than a
-minute past, so a stale sensor never leaves the row stuck. Entities with on/off
-states get a toggle; others (a lock) show their state.
+For a `timer.*` entity, the countdown reads `attributes.finishes_at` while the
+timer is `active` and is empty when `idle`, `paused`, or `unavailable`. For a
+timestamp sensor, the second line is empty when the sensor is unknown or its
+time is more than a minute past, so a stale sensor never leaves the row stuck.
+Entities with on/off states get a toggle; others (a lock) show their state.
+
+## Countdown tile
+
+Wraps Home Assistant's built-in `tile` card and appends a live countdown (or
+optional hold label) to its secondary line—for example, a climate tile showing
+`Cool · Off in 15m 00s`, `Cool · Turning off`, or `Cool · Lights on`.
+
+```yaml
+type: custom:dash-countdown-tile
+entity: climate.office_ac
+deadline_entity: timer.office_ac_auto_off
+hold_entity: binary_sensor.office_lights
+hold_text: Lights on
+features:
+  - type: climate-hvac-modes
+    hvac_modes: [off, cool, heat, fan_only]
+  - type: target-temperature
+```
+
+| Option | Default | |
+|---|---|---|
+| `entity` | required | The entity shown by the tile |
+| `deadline_entity` | required | A `timer.*` entity or timestamp sensor (`device_class: timestamp`) |
+| `countdown_text` | `Off in {time}` | Suffix while counting down; `{time}` reads `3m 05s` or `42s` |
+| `due_text` | `Turning off` | Suffix from the deadline until a minute after it |
+| `hold_entity` | — | Optional entity whose `on` state shows `hold_text` when no countdown is active |
+| `hold_text` | — | Suffix shown when `hold_entity` is `on` and no countdown is running |
+
+When `entity` is `off`, `unavailable`, or `unknown`, the countdown/hold suffix is
+hidden. All standard Home Assistant `tile` card options (`name`, `icon`,
+`color`, `hide_state`, `vertical`, `features`, `features_position`,
+`tap_action`, `icon_tap_action`, etc.) are forwarded directly to `hui-tile-card`.
+When `hide_state: true`, the suffix displays on its own without a leading `·`.
 
 ## Channel row
 
@@ -106,8 +143,8 @@ npm test            # unit tests, and every story run in Chromium with its asser
 npm run build       # dist/ha-dashboard-ui.js
 ```
 
-In Storybook, three Home Assistant elements (`hui-generic-entity-row`,
-`state-badge`, `ha-entity-toggle`) are replaced by stand-ins in
+In Storybook, Home Assistant's row and tile elements (`hui-generic-entity-row`,
+`state-badge`, `ha-entity-toggle`, `hui-tile-card`) are replaced by stand-ins in
 `.storybook/ha-stand-ins.ts`, styled from Home Assistant's frontend. Inside Home
 Assistant the real ones are used, so check a change on a real dashboard before
 releasing.

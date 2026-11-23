@@ -1,9 +1,10 @@
 /**
- * Stand-ins for the three Home Assistant elements our rows render inside HA:
- * `hui-generic-entity-row`, `state-badge` and `ha-entity-toggle`. Layout and
- * colours follow HA's frontend (Apache-2.0, github.com/home-assistant/frontend);
- * behaviour is reduced to what a story needs. They are never bundled: inside
- * HA the real elements are used.
+ * Stand-ins for Home Assistant elements our rows and cards render inside HA:
+ * `hui-generic-entity-row`, `state-badge`, `ha-entity-toggle`, and
+ * `hui-tile-card` (with `ha-card`, `ha-tile-info`, `state-display` and
+ * `hui-warning`). Layout and colours follow HA's frontend (Apache-2.0,
+ * github.com/home-assistant/frontend); behaviour is reduced to what a story
+ * needs. They are never bundled: inside HA the real elements are used.
  *
  * `ha-card-frame` stands in for an entities card, so rows sit with HA's
  * spacing and padding.
@@ -34,6 +35,19 @@ function iconPath(stateObj: HassEntity | undefined, override?: string): string {
       return on ? mdi.mdiFan : mdi.mdiFanOff;
     case 'lock':
       return stateObj?.state === 'unlocked' ? mdi.mdiLockOpenVariant : mdi.mdiLock;
+    case 'climate':
+      switch (stateObj?.state) {
+        case 'cool':
+          return mdi.mdiSnowflake;
+        case 'heat':
+          return mdi.mdiFire;
+        case 'dry':
+          return mdi.mdiWaterPercent;
+        case 'fan_only':
+          return mdi.mdiFan;
+        default:
+          return mdi.mdiThermostat;
+      }
     default:
       return mdi.mdiEye;
   }
@@ -275,11 +289,338 @@ class CardFrame extends LitElement {
   `;
 }
 
+interface TileFeatureConfig {
+  type: string;
+  hvac_modes?: string[];
+}
+
+interface TileCardConfig {
+  type?: string;
+  entity: string;
+  name?: string;
+  icon?: string;
+  color?: string;
+  hide_state?: boolean;
+  vertical?: boolean;
+  features?: TileFeatureConfig[];
+  features_position?: 'bottom' | 'inline';
+}
+
+const TILE_COLOR: Record<string, string> = {
+  cool: '#2196f3',
+  heat: '#ff9800',
+  heat_cool: '#4caf50',
+  auto: '#4caf50',
+  dry: '#ff9800',
+  fan_only: '#00bcd4',
+  on: '#ffc107',
+};
+
+const HVAC_MODE_ICON: Record<string, string> = {
+  off: mdi.mdiPower,
+  cool: mdi.mdiSnowflake,
+  heat: mdi.mdiFire,
+  heat_cool: mdi.mdiAutorenew,
+  auto: mdi.mdiAutorenew,
+  dry: mdi.mdiWaterPercent,
+  fan_only: mdi.mdiFan,
+};
+
+class HaCard extends LitElement {
+  render() {
+    return html`<slot></slot>`;
+  }
+
+  static styles = css`
+    :host {
+      display: block;
+      height: 100%;
+      background: var(--card-background-color);
+      border: 1px solid var(--ha-card-border-color);
+      border-radius: var(--ha-card-border-radius);
+      color: var(--primary-text-color);
+      box-sizing: border-box;
+    }
+  `;
+}
+
+class HaTileInfo extends LitElement {
+  render() {
+    return html`<div class="info">
+      <span class="primary"><slot name="primary"></slot></span>
+      <span class="secondary"><slot name="secondary"></slot></span>
+    </div>`;
+  }
+
+  static styles = css`
+    :host {
+      display: block;
+      min-width: 0;
+      flex: 1;
+    }
+    .info {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-width: 0;
+    }
+    .primary {
+      font-size: 14px;
+      font-weight: 500;
+      line-height: 20px;
+      color: var(--primary-text-color);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .secondary {
+      font-size: 12px;
+      font-weight: 400;
+      line-height: 16px;
+      color: var(--secondary-text-color);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  `;
+}
+
+class StateDisplay extends LitElement {
+  static properties = {
+    hass: { attribute: false },
+    stateObj: { attribute: false },
+  };
+  declare hass?: Hass;
+  declare stateObj?: HassEntity;
+
+  render() {
+    if (!this.stateObj) return nothing;
+    return this.hass?.formatEntityState?.(this.stateObj) ?? this.stateObj.state;
+  }
+}
+
+class HuiWarning extends LitElement {
+  render() {
+    return html`<div class="warning"><slot></slot></div>`;
+  }
+
+  static styles = css`
+    .warning {
+      padding: 12px 16px;
+      color: #fff;
+      background: var(--warning-color, #ff9800);
+      border-radius: var(--ha-card-border-radius);
+    }
+  `;
+}
+
+class HuiTileCard extends LitElement {
+  static properties = {
+    hass: { attribute: false },
+    _config: { state: true },
+  };
+  declare hass?: Hass;
+  private declare _config?: TileCardConfig;
+
+  setConfig(config: TileCardConfig) {
+    if (!config?.entity) throw new Error('hui-tile-card needs an entity');
+    this._config = config;
+  }
+
+  getCardSize(): number {
+    const stackedFeatures =
+      this._config?.features_position === 'inline' ? 0 : (this._config?.features?.length ?? 0);
+    return 1 + (this._config?.vertical ? 1 : 0) + stackedFeatures;
+  }
+
+  getGridOptions(): Record<string, unknown> {
+    const featureCount = this._config?.features?.length ?? 0;
+    const inline = featureCount > 0 && this._config?.features_position === 'inline';
+    const rows = 1 + (this._config?.vertical ? 1 : 0) + (inline ? 0 : featureCount);
+    return {
+      columns: inline ? 12 : 6,
+      min_columns: inline ? 6 : 3,
+      rows,
+      min_rows: rows,
+    };
+  }
+
+  render() {
+    if (!this.hass || !this._config) return nothing;
+    const stateObj = this.hass.states[this._config.entity];
+    if (!stateObj) {
+      return html`<hui-warning>Entity not found: ${this._config.entity}</hui-warning>`;
+    }
+
+    const name = this._config.name ?? (stateObj.attributes.friendly_name as string) ?? this._config.entity;
+    const activeColor = TILE_COLOR[stateObj.state];
+    const iconStyle = activeColor
+      ? `color: ${activeColor}; background: color-mix(in srgb, ${activeColor} 20%, transparent);`
+      : '';
+    const features = this._config.features ?? [];
+    const vertical = Boolean(this._config.vertical);
+    const inline = features.length > 0 && this._config.features_position === 'inline';
+
+    return html`<ha-card>
+      <div class="container ${inline ? 'inline' : ''}">
+        <div class="content ${vertical ? 'vertical' : ''}">
+          <div class="icon" style=${iconStyle}>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              ${svg`<path d=${iconPath(stateObj, this._config.icon)}></path>`}
+            </svg>
+          </div>
+          <ha-tile-info slot="info">
+            <span slot="primary">${name}</span>
+            ${this._config.hide_state
+              ? nothing
+              : html`<span slot="secondary">
+                  <state-display .hass=${this.hass} .stateObj=${stateObj}></state-display>
+                </span>`}
+          </ha-tile-info>
+        </div>
+        ${features.length
+          ? html`<div class="features">
+              ${features.map((feature) => this._renderFeature(feature, stateObj))}
+            </div>`
+          : nothing}
+      </div>
+    </ha-card>`;
+  }
+
+  private _renderFeature(feature: TileFeatureConfig, stateObj: HassEntity) {
+    if (feature.type === 'climate-hvac-modes') {
+      const modes =
+        feature.hvac_modes ??
+        (Array.isArray(stateObj.attributes.hvac_modes)
+          ? (stateObj.attributes.hvac_modes as string[])
+          : ['off', 'cool', 'heat']);
+      return html`<div class="feature-modes">
+        ${modes.map((mode) => {
+          const active = stateObj.state === mode;
+          const color = active ? TILE_COLOR[mode] ?? 'var(--primary-color)' : undefined;
+          const style = color ? `background: ${color}; color: #fff;` : '';
+          return html`<div class="mode ${active ? 'active' : ''}" style=${style} title=${mode}>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              ${svg`<path d=${HVAC_MODE_ICON[mode] ?? mdi.mdiThermostat}></path>`}
+            </svg>
+          </div>`;
+        })}
+      </div>`;
+    }
+    if (feature.type === 'target-temperature') {
+      const temp = stateObj.attributes.temperature;
+      return html`<div class="feature-temp">
+        <span class="temp-btn">
+          <svg viewBox="0 0 24 24" aria-hidden="true">${svg`<path d=${mdi.mdiMinus}></path>`}</svg>
+        </span>
+        <span class="temp-value">${temp !== undefined ? `${temp} °C` : '—'}</span>
+        <span class="temp-btn">
+          <svg viewBox="0 0 24 24" aria-hidden="true">${svg`<path d=${mdi.mdiPlus}></path>`}</svg>
+        </span>
+      </div>`;
+    }
+    return nothing;
+  }
+
+  static styles = css`
+    :host {
+      display: block;
+      max-width: 360px;
+    }
+    .container {
+      display: flex;
+      flex-direction: column;
+      padding: 10px;
+      gap: 10px;
+    }
+    .container.inline {
+      flex-direction: row;
+      align-items: center;
+    }
+    .content {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      flex: 1;
+    }
+    .content.vertical {
+      flex-direction: column;
+      text-align: center;
+    }
+    .icon {
+      width: 36px;
+      height: 36px;
+      flex: 0 0 36px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--disabled-text-color);
+      background: color-mix(in srgb, var(--disabled-text-color) 18%, transparent);
+    }
+    .icon svg {
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
+    }
+    .features {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .feature-modes {
+      display: flex;
+      gap: 6px;
+      padding: 4px;
+      border-radius: 10px;
+      background: var(--primary-background-color);
+    }
+    .mode {
+      flex: 1;
+      height: 34px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--secondary-text-color);
+    }
+    .mode svg,
+    .temp-btn svg {
+      width: 18px;
+      height: 18px;
+      fill: currentColor;
+    }
+    .feature-temp {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 40px;
+      padding: 0 12px;
+      border-radius: 10px;
+      background: var(--primary-background-color);
+      color: var(--primary-text-color);
+      font-weight: 500;
+    }
+    .temp-btn {
+      display: inline-flex;
+      align-items: center;
+      color: var(--secondary-text-color);
+    }
+  `;
+}
+
 for (const [tag, element] of [
   ['state-badge', StateBadge],
   ['ha-entity-toggle', EntityToggle],
   ['hui-generic-entity-row', GenericEntityRow],
   ['ha-card-frame', CardFrame],
+  ['ha-card', HaCard],
+  ['ha-tile-info', HaTileInfo],
+  ['state-display', StateDisplay],
+  ['hui-warning', HuiWarning],
+  ['hui-tile-card', HuiTileCard],
 ] as const) {
   if (!customElements.get(tag)) customElements.define(tag, element);
 }
