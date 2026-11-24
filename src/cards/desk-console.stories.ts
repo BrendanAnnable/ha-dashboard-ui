@@ -225,12 +225,18 @@ async function assertConsole(canvasElement: HTMLElement) {
     const buttons = [...card.shadowRoot!.querySelectorAll<HTMLButtonElement>('.mode-btn, .preset-btn')];
     for (const btn of buttons) {
       await expect(btn.scrollWidth).toBeLessThanOrEqual(btn.clientWidth + 1);
+      await expect(btn.getBoundingClientRect().height).toBeGreaterThanOrEqual(40);
       const icon = btn.querySelector('ha-icon') as (HTMLElement & { updateComplete?: Promise<unknown> }) | null;
       if (icon) {
         await icon.updateComplete;
         await expect(icon.shadowRoot?.querySelector('svg path')).not.toBeNull();
       }
     }
+  }
+
+  await expect(climate.getBoundingClientRect().height).toBeLessThan(175);
+  for (const preset of presets) {
+    await expect(preset.getBoundingClientRect().height).toBeLessThan(105);
   }
 }
 

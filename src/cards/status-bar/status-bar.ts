@@ -177,8 +177,8 @@ export class StatusBar extends LitElement {
       align-items: center;
       justify-content: space-between;
       flex-wrap: wrap;
-      gap: 10px 16px;
-      padding: 10px 16px;
+      gap: 8px 14px;
+      padding: 8px 14px;
       box-sizing: border-box;
     }
 
@@ -191,7 +191,7 @@ export class StatusBar extends LitElement {
     }
 
     .clock {
-      font-size: 20px;
+      font-size: 18px;
       font-weight: 600;
       line-height: 1.1;
       letter-spacing: -0.01em;
@@ -246,13 +246,13 @@ export class StatusBar extends LitElement {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      min-height: 34px;
-      padding: 6px 11px;
+      min-height: 30px;
+      padding: 4px 10px;
       border-radius: 999px;
       border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
       background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
       color: var(--primary-text-color);
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 500;
       line-height: 1.2;
       white-space: nowrap;

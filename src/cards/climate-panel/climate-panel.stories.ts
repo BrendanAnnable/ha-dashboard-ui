@@ -107,14 +107,24 @@ export const CoolingWithCountdown: Story = {
     await expect(root.querySelector('.room')?.textContent?.trim()).toBe('Room 24.5°');
     await expect(root.querySelector('.status')?.textContent?.trim()).toBe('Off in 84m 18s');
 
-    await step('renders tactile stepper buttons at >= 42px hit target', async () => {
-      const buttons = [...root.querySelectorAll<HTMLButtonElement>('.step-btn')];
-      await expect(buttons).toHaveLength(2);
-      for (const btn of buttons) {
+    await step('renders >= 40px touch targets and stays under 175px total height', async () => {
+      const stepButtons = [...root.querySelectorAll<HTMLButtonElement>('.step-btn')];
+      await expect(stepButtons).toHaveLength(2);
+      for (const btn of stepButtons) {
         const rect = btn.getBoundingClientRect();
-        await expect(rect.width).toBeGreaterThanOrEqual(42);
-        await expect(rect.height).toBeGreaterThanOrEqual(42);
+        await expect(rect.width).toBeGreaterThanOrEqual(40);
+        await expect(rect.height).toBeGreaterThanOrEqual(40);
       }
+
+      const modeButtons = [...root.querySelectorAll<HTMLButtonElement>('.mode-btn')];
+      await expect(modeButtons).toHaveLength(5);
+      for (const btn of modeButtons) {
+        await expect(btn.getBoundingClientRect().height).toBeGreaterThanOrEqual(40);
+      }
+
+      const targetEl = root.querySelector<HTMLElement>('.target')!;
+      await expect(getComputedStyle(targetEl).fontSize).toBe('36px');
+      await expect(panel.getBoundingClientRect().height).toBeLessThan(175);
     });
 
     await step('calls climate services on stepper and mode clicks and fires more-info on header click', async () => {

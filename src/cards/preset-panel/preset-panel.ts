@@ -152,8 +152,8 @@ export class PresetPanel extends LitElement {
       container-type: inline-size;
       display: flex;
       flex-direction: column;
-      gap: 12px;
-      padding: 16px;
+      gap: 8px;
+      padding: 11px 14px;
       box-sizing: border-box;
     }
 
@@ -188,7 +188,7 @@ export class PresetPanel extends LitElement {
     .pill {
       display: inline-flex;
       align-items: center;
-      padding: 4px 10px;
+      padding: 3px 9px;
       border-radius: 999px;
       font-size: 12px;
       font-weight: 600;
@@ -231,16 +231,16 @@ export class PresetPanel extends LitElement {
       grid-auto-flow: column;
       grid-auto-columns: minmax(0, 1fr);
       gap: 6px;
-      padding: 4px;
-      border-radius: 12px;
+      padding: 3px;
+      border-radius: 11px;
       background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
     }
 
     .preset-btn {
       all: unset;
       box-sizing: border-box;
-      min-height: 44px;
-      padding: 8px 6px;
+      min-height: 40px;
+      padding: 8px 8px;
       border-radius: 9px;
       border: 1px solid transparent;
       display: inline-flex;
@@ -258,19 +258,21 @@ export class PresetPanel extends LitElement {
 
     .presets.compact .preset-btn {
       flex-direction: column;
-      gap: 3px;
-      min-height: 50px;
-      padding: 6px 4px;
+      gap: 2px;
+      min-height: 42px;
+      padding: 4px 4px;
       font-size: 12px;
+      --mdc-icon-size: 16px;
     }
 
     @container (max-width: 340px) {
       .preset-btn {
         flex-direction: column;
-        gap: 3px;
-        min-height: 50px;
-        padding: 6px 4px;
+        gap: 2px;
+        min-height: 42px;
+        padding: 4px 4px;
         font-size: 12px;
+        --mdc-icon-size: 16px;
       }
     }
 

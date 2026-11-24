@@ -124,6 +124,19 @@ export const Default: Story = {
     await expect(chips[1].textContent?.replace(/\s+/g, ' ').trim()).toBe('Front Door · Locked');
     await expect(chips[3].textContent?.replace(/\s+/g, ' ').trim()).toBe('Cameras');
 
+    await step('uses compact tablet spacing and typography', async () => {
+      const barEl = root.querySelector<HTMLElement>('.bar')!;
+      const clockEl = root.querySelector<HTMLElement>('.clock')!;
+      await expect(getComputedStyle(barEl).padding).toBe('8px 14px');
+      await expect(getComputedStyle(clockEl).fontSize).toBe('18px');
+      for (const chip of chips) {
+        await expect(getComputedStyle(chip).fontSize).toBe('12px');
+        const rect = chip.getBoundingClientRect();
+        await expect(rect.height).toBeGreaterThanOrEqual(30);
+        await expect(rect.height).toBeLessThanOrEqual(32);
+      }
+    });
+
     await step('fires more-info on weather and entity chips and navigates on nav chips', async () => {
       const moreInfoEntities: string[] = [];
       bar.addEventListener('hass-more-info', ((ev: CustomEvent<{ entityId: string }>) => {

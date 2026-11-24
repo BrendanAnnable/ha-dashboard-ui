@@ -188,8 +188,8 @@ export class ClimatePanel extends LitElement {
       container-type: inline-size;
       display: flex;
       flex-direction: column;
-      gap: 14px;
-      padding: 16px;
+      gap: 10px;
+      padding: 12px 14px;
       box-sizing: border-box;
     }
 
@@ -224,7 +224,7 @@ export class ClimatePanel extends LitElement {
     .pill {
       display: inline-flex;
       align-items: center;
-      padding: 4px 10px;
+      padding: 3px 9px;
       border-radius: 999px;
       font-size: 12px;
       font-weight: 600;
@@ -272,14 +272,14 @@ export class ClimatePanel extends LitElement {
     .readout {
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 2px;
       min-width: 0;
     }
 
     .target {
-      font-size: 44px;
+      font-size: 36px;
       font-weight: 600;
-      line-height: 1.05;
+      line-height: 1;
       letter-spacing: -0.02em;
       font-variant-numeric: tabular-nums;
       color: var(--primary-text-color);
@@ -295,9 +295,9 @@ export class ClimatePanel extends LitElement {
       flex-wrap: wrap;
       align-items: center;
       gap: 4px 10px;
-      min-height: 18px;
-      font-size: 13px;
-      line-height: 1.3;
+      min-height: 16px;
+      font-size: 12px;
+      line-height: 1.25;
       color: var(--secondary-text-color);
       font-variant-numeric: tabular-nums;
     }
@@ -317,9 +317,11 @@ export class ClimatePanel extends LitElement {
     .step-btn {
       all: unset;
       box-sizing: border-box;
-      width: 46px;
-      height: 46px;
-      border-radius: 12px;
+      width: 40px;
+      height: 40px;
+      min-width: 40px;
+      min-height: 40px;
+      border-radius: 10px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -328,7 +330,7 @@ export class ClimatePanel extends LitElement {
       background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
       border: 1px solid color-mix(in srgb, var(--primary-text-color) 12%, transparent);
       transition: background-color 120ms, transform 80ms, opacity 120ms;
-      --mdc-icon-size: 22px;
+      --mdc-icon-size: 20px;
     }
 
     .step-btn:hover:not(:disabled) {
@@ -354,16 +356,16 @@ export class ClimatePanel extends LitElement {
       grid-auto-flow: column;
       grid-auto-columns: minmax(0, 1fr);
       gap: 6px;
-      padding: 4px;
-      border-radius: 12px;
+      padding: 3px;
+      border-radius: 11px;
       background: color-mix(in srgb, var(--primary-text-color) 5%, transparent);
     }
 
     .mode-btn {
       all: unset;
       box-sizing: border-box;
-      min-height: 44px;
-      padding: 8px 6px;
+      min-height: 40px;
+      padding: 8px 10px;
       border-radius: 9px;
       border: 1px solid transparent;
       display: inline-flex;
@@ -381,19 +383,21 @@ export class ClimatePanel extends LitElement {
 
     .modes.compact .mode-btn {
       flex-direction: column;
-      gap: 3px;
-      min-height: 50px;
-      padding: 6px 4px;
+      gap: 2px;
+      min-height: 42px;
+      padding: 4px 4px;
       font-size: 12px;
+      --mdc-icon-size: 16px;
     }
 
     @container (max-width: 340px) {
       .mode-btn {
         flex-direction: column;
-        gap: 3px;
-        min-height: 50px;
-        padding: 6px 4px;
+        gap: 2px;
+        min-height: 42px;
+        padding: 4px 4px;
         font-size: 12px;
+        --mdc-icon-size: 16px;
       }
     }
 

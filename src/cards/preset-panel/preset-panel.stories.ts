@@ -128,8 +128,9 @@ export const LightsPresence: Story = {
     await expect(buttons[3].getAttribute('aria-pressed')).toBe('true');
 
     for (const btn of buttons) {
-      await expect(btn.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+      await expect(btn.getBoundingClientRect().height).toBeGreaterThanOrEqual(40);
     }
+    await expect(panel.getBoundingClientRect().height).toBeLessThan(105);
 
     await step('calls configured service with merged data and opens more-info from header', async () => {
       const calls: Array<{ domain: string; service: string; data?: Record<string, unknown> }> = [];
