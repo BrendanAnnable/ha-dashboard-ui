@@ -1,6 +1,6 @@
 {
   "name": "ha-dashboard-ui",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Custom dashboard rows and cards for Home Assistant, built to be previewed and tested in Storybook.",
   "type": "module",
   "license": "MIT",
