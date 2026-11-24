@@ -1,4 +1,7 @@
+import type { ClimatePanel, ClimatePanelConfig } from '../cards/climate-panel/climate-panel';
 import type { CountdownTile, CountdownTileConfig } from '../cards/countdown-tile/countdown-tile';
+import type { PresetPanel, PresetPanelConfig } from '../cards/preset-panel/preset-panel';
+import type { StatusBar, StatusBarConfig } from '../cards/status-bar/status-bar';
 import type { Hass } from '../core/hass';
 import type { EntityRow } from '../core/entity-row';
 
@@ -32,6 +35,54 @@ export function createTile({ config, hass, now = STORY_NOW }: TileSpec): Countdo
   tile.now = () => now;
   tile.hass = hass;
   return tile;
+}
+
+export function createClimatePanel({
+  config,
+  hass,
+  now = STORY_NOW,
+}: {
+  config: ClimatePanelConfig;
+  hass: Hass;
+  now?: number;
+}): ClimatePanel {
+  const card = document.createElement('dash-climate-panel') as ClimatePanel;
+  card.setConfig(config);
+  card.now = () => now;
+  card.hass = hass;
+  return card;
+}
+
+export function createPresetPanel({
+  config,
+  hass,
+  now = STORY_NOW,
+}: {
+  config: PresetPanelConfig;
+  hass: Hass;
+  now?: number;
+}): PresetPanel {
+  const card = document.createElement('dash-preset-panel') as PresetPanel;
+  card.setConfig(config);
+  card.now = () => now;
+  card.hass = hass;
+  return card;
+}
+
+export function createStatusBar({
+  config,
+  hass,
+  now = STORY_NOW,
+}: {
+  config: StatusBarConfig;
+  hass: Hass;
+  now?: number;
+}): StatusBar {
+  const card = document.createElement('dash-status-bar') as StatusBar;
+  card.setConfig(config);
+  card.now = () => now;
+  card.hass = hass;
+  return card;
 }
 
 /** Rows inside a stand-in entities card, the way they sit on a dashboard. */

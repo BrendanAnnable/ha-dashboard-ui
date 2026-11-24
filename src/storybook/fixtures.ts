@@ -13,7 +13,10 @@ export interface FakeEntity {
   attributes?: Record<string, unknown>;
 }
 
-export function fakeHass(entities: Record<string, FakeEntity>): Hass {
+export function fakeHass(
+  entities: Record<string, FakeEntity>,
+  options?: { callService?: Hass['callService'] },
+): Hass {
   const states: Record<string, HassEntity> = {};
   const registry: Record<string, EntityRegistryEntry> = {};
   for (const [entity_id, entity] of Object.entries(entities)) {
@@ -28,6 +31,7 @@ export function fakeHass(entities: Record<string, FakeEntity>): Hass {
     states,
     entities: registry,
     formatEntityState: (stateObj) => stateObj.state.charAt(0).toUpperCase() + stateObj.state.slice(1),
+    callService: options?.callService,
   };
 }
 

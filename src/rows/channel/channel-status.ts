@@ -1,4 +1,4 @@
-import { countdownAt, countdownText, type CountdownText } from '../../core/countdown';
+import { countdownForEntity, countdownText, type CountdownText } from '../../core/countdown';
 import { findSibling, type SiblingRole } from '../../core/discover';
 import type { Hass } from '../../core/hass';
 
@@ -69,6 +69,6 @@ export function channelLine(
     return { text: STATUS_TEXT.motion!, ticking: false };
   }
 
-  const countdown = countdownAt(channel.deadline ? hass.states[channel.deadline]?.state : undefined, now);
+  const countdown = countdownForEntity(channel.deadline ? hass.states[channel.deadline] : undefined, now);
   return { text: countdownText(countdown, text), ticking: countdown.kind === 'running' };
 }

@@ -22,6 +22,24 @@ export interface Hass {
   states: Record<string, HassEntity | undefined>;
   entities?: Record<string, EntityRegistryEntry | undefined>;
   formatEntityState?: (stateObj: HassEntity, state?: string) => string;
+  callService?: (domain: string, service: string, data?: Record<string, unknown>) => Promise<void> | void;
+}
+
+/** Opens Home Assistant's built-in more-info dialog for an entity. */
+export function fireMoreInfo(el: HTMLElement, entityId: string): void {
+  el.dispatchEvent(
+    new CustomEvent('hass-more-info', {
+      detail: { entityId },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+}
+
+/** Navigates within Home Assistant's frontend router. */
+export function navigateTo(path: string): void {
+  history.pushState(null, '', path);
+  window.dispatchEvent(new Event('location-changed'));
 }
 
 /** Row options HA's own entity rows understand; passed straight through. */

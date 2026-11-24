@@ -15,16 +15,19 @@ import type { EntityRowConfig, Hass, HassEntity } from '../src/core/hass';
 
 const domainOf = (id: string) => id.split('.')[0];
 
+function mdiPath(icon?: string): string | undefined {
+  if (!icon?.startsWith('mdi:')) return undefined;
+  const key = `mdi${icon
+    .slice(4)
+    .split('-')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join('')}`;
+  return (mdi as Record<string, string>)[key];
+}
+
 function iconPath(stateObj: HassEntity | undefined, override?: string): string {
-  if (override?.startsWith('mdi:')) {
-    const key = `mdi${override
-      .slice(4)
-      .split('-')
-      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-      .join('')}`;
-    const path = (mdi as Record<string, string>)[key];
-    if (path) return path;
-  }
+  const custom = mdiPath(override);
+  if (custom) return custom;
   const on = stateObj?.state === 'on';
   switch (stateObj && domainOf(stateObj.entity_id)) {
     case 'light':
@@ -611,12 +614,40 @@ class HuiTileCard extends LitElement {
   `;
 }
 
+class HaIcon extends LitElement {
+  static properties = { icon: { type: String } };
+  declare icon?: string;
+
+  render() {
+    const path = mdiPath(this.icon);
+    if (!path) return nothing;
+    return html`<svg viewBox="0 0 24 24" aria-hidden="true">${svg`<path d=${path}></path>`}</svg>`;
+  }
+
+  static styles = css`
+    :host {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: var(--mdc-icon-size, 24px);
+      height: var(--mdc-icon-size, 24px);
+      flex: 0 0 auto;
+    }
+    svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+    }
+  `;
+}
+
 for (const [tag, element] of [
   ['state-badge', StateBadge],
   ['ha-entity-toggle', EntityToggle],
   ['hui-generic-entity-row', GenericEntityRow],
   ['ha-card-frame', CardFrame],
   ['ha-card', HaCard],
+  ['ha-icon', HaIcon],
   ['ha-tile-info', HaTileInfo],
   ['state-display', StateDisplay],
   ['hui-warning', HuiWarning],
