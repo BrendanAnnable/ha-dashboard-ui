@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { expect } from 'storybook/test';
 import { fakeHass } from '../../storybook/fixtures';
 import { createStatusBar } from '../../storybook/render';
-import type { StatusBar } from './status-bar';
+import type { StatusBar, StatusBarChipConfig } from './status-bar';
 
 const FIXED_LOCAL_NOW = new Date(2026, 0, 1, 14, 5, 0, 0).getTime();
 
@@ -235,5 +235,229 @@ export const ToggleAndStaticChips: Story = {
     await expect(calls).toEqual([
       { domain: 'homeassistant', service: 'toggle', data: { entity_id: 'light.desk_lamp' } },
     ]);
+  },
+};
+
+const PRICE_CHIPS: StatusBarChipConfig[] = [
+  {
+    entity: 'sensor.amber_general_price',
+    value_attribute: 'detailedForecast.0.per_kwh',
+    icon: 'mdi:arrow-down',
+    scale: 100,
+    decimals: 0,
+    unit: '¢',
+    ok_below: 10,
+    warn_above: 30,
+    danger_above: 45,
+    warn_entity: 'binary_sensor.amber_demand_window',
+    warn_badge: 'DW',
+    badge: {
+      attribute: 'estimate',
+      equals: false,
+      icon: 'mdi:check',
+      else_text: 'est',
+    },
+  },
+  {
+    entity: 'sensor.amber_feed_in_price',
+    value_attribute: 'detailedForecast.0.per_kwh',
+    icon: 'mdi:arrow-up',
+    scale: 100,
+    decimals: 0,
+    unit: '¢',
+    ok_above: 12,
+    danger_below: 0,
+    badge: {
+      attribute: 'estimate',
+      equals: false,
+      icon: 'mdi:check',
+      else_text: 'est',
+    },
+  },
+];
+
+function buildPriceHass(options: {
+  importPerKwh: number;
+  importEstimate: boolean;
+  exportPerKwh: number;
+  exportEstimate: boolean;
+  demandWindow: 'on' | 'off';
+}) {
+  return fakeHass({
+    'sensor.amber_general_price': {
+      state: String(options.importPerKwh),
+      attributes: {
+        unit_of_measurement: '$/kWh',
+        estimate: options.importEstimate,
+        detailedForecast: [{ per_kwh: options.importPerKwh }],
+      },
+    },
+    'sensor.amber_feed_in_price': {
+      state: String(options.exportPerKwh),
+      attributes: {
+        unit_of_measurement: '$/kWh',
+        estimate: options.exportEstimate,
+        detailedForecast: [{ per_kwh: options.exportPerKwh }],
+      },
+    },
+    'binary_sensor.amber_demand_window': {
+      state: options.demandWindow,
+    },
+  });
+}
+
+async function renderedIconPath(iconEl: Element | null): Promise<string> {
+  const host = iconEl as (HTMLElement & { updateComplete?: Promise<unknown> }) | null;
+  await host?.updateComplete;
+  return host?.shadowRoot?.querySelector('svg path')?.getAttribute('d') ?? '';
+}
+
+export const EnergyPricesConfirmedAndEstimated: Story = {
+  render: () =>
+    createStatusBar({
+      config: {
+        show_clock: true,
+        chips: PRICE_CHIPS,
+      },
+      hass: buildPriceHass({
+        importPerKwh: 0.184,
+        importEstimate: false,
+        exportPerKwh: 0.082,
+        exportEstimate: true,
+        demandWindow: 'off',
+      }),
+      now: FIXED_LOCAL_NOW,
+    }),
+  play: async ({ canvasElement, step }) => {
+    const bar = barOf(canvasElement);
+    await bar.updateComplete;
+    const root = bar.shadowRoot!;
+    const chips = [...root.querySelectorAll<HTMLElement>('.chip')];
+    await expect(chips).toHaveLength(2);
+
+    await expect(chips[0].getAttribute('data-tone')).toBe('default');
+    await expect(chips[0].querySelector('.chip-value')?.textContent?.trim()).toBe('18¢');
+    await expect(chips[0].querySelector('.warn-badge')).toBeNull();
+    await expect(chips[0].querySelector('.chip-badge')).not.toBeNull();
+    await expect(chips[0].querySelector('.chip-badge-muted')).toBeNull();
+
+    await expect(chips[1].getAttribute('data-tone')).toBe('default');
+    await expect(chips[1].querySelector('.chip-value')?.textContent?.trim()).toBe('8¢');
+    await expect(chips[1].querySelector('.chip-badge')).toBeNull();
+    await expect(chips[1].querySelector('.chip-badge-muted')?.textContent?.trim()).toBe('est');
+
+    await step('renders mdi:arrow-down, mdi:arrow-up, and mdi:check stand-in SVG paths', async () => {
+      const importIcons = chips[0].querySelectorAll('ha-icon');
+      const exportIcons = chips[1].querySelectorAll('ha-icon');
+      await expect(importIcons).toHaveLength(2);
+      await expect(exportIcons).toHaveLength(1);
+      await expect(await renderedIconPath(importIcons[0])).not.toBe('');
+      await expect(await renderedIconPath(importIcons[1])).not.toBe('');
+      await expect(await renderedIconPath(exportIcons[0])).not.toBe('');
+    });
+  },
+};
+
+export const EnergyPricesCheap: Story = {
+  render: () =>
+    createStatusBar({
+      config: {
+        show_clock: true,
+        chips: PRICE_CHIPS,
+      },
+      hass: buildPriceHass({
+        importPerKwh: -0.04,
+        importEstimate: false,
+        exportPerKwh: 0.16,
+        exportEstimate: false,
+        demandWindow: 'off',
+      }),
+      now: FIXED_LOCAL_NOW,
+    }),
+  play: async ({ canvasElement }) => {
+    const bar = barOf(canvasElement);
+    await bar.updateComplete;
+    const chips = [...bar.shadowRoot!.querySelectorAll<HTMLElement>('.chip')];
+
+    await expect(chips[0].getAttribute('data-tone')).toBe('ok');
+    await expect(chips[0].querySelector('.chip-value')?.textContent?.trim()).toBe('-4¢');
+    await expect(chips[1].getAttribute('data-tone')).toBe('ok');
+    await expect(chips[1].querySelector('.chip-value')?.textContent?.trim()).toBe('16¢');
+  },
+};
+
+export const EnergyPricesDemandWindow: Story = {
+  render: () =>
+    createStatusBar({
+      config: {
+        show_clock: true,
+        chips: PRICE_CHIPS,
+      },
+      hass: buildPriceHass({
+        importPerKwh: 0.22,
+        importEstimate: true,
+        exportPerKwh: 0.09,
+        exportEstimate: true,
+        demandWindow: 'on',
+      }),
+      now: FIXED_LOCAL_NOW,
+    }),
+  play: async ({ canvasElement, step }) => {
+    const bar = barOf(canvasElement);
+    await bar.updateComplete;
+    const chips = () => [...bar.shadowRoot!.querySelectorAll<HTMLElement>('.chip')];
+
+    await expect(chips()[0].getAttribute('data-tone')).toBe('warn');
+    await expect(chips()[0].querySelector('.chip-value')?.textContent?.trim()).toBe('22¢');
+    await expect(chips()[0].querySelector('.warn-badge')?.textContent?.trim()).toBe('DW');
+    await expect(chips()[0].querySelector('.chip-badge-muted')?.textContent?.trim()).toBe('est');
+    await expect(chips()[1].getAttribute('data-tone')).toBe('default');
+
+    await step('re-renders when only warn_entity changes', async () => {
+      bar.hass = {
+        ...bar.hass!,
+        states: {
+          ...bar.hass!.states,
+          'binary_sensor.amber_demand_window': {
+            ...bar.hass!.states['binary_sensor.amber_demand_window']!,
+            state: 'off',
+          },
+        },
+      };
+      await bar.updateComplete;
+      await expect(chips()[0].getAttribute('data-tone')).toBe('default');
+      await expect(chips()[0].querySelector('.warn-badge')).toBeNull();
+    });
+  },
+};
+
+export const EnergyPricesSpike: Story = {
+  render: () =>
+    createStatusBar({
+      config: {
+        show_clock: true,
+        chips: PRICE_CHIPS,
+      },
+      hass: buildPriceHass({
+        importPerKwh: 0.54,
+        importEstimate: false,
+        exportPerKwh: -0.03,
+        exportEstimate: false,
+        demandWindow: 'on',
+      }),
+      now: FIXED_LOCAL_NOW,
+    }),
+  play: async ({ canvasElement }) => {
+    const bar = barOf(canvasElement);
+    await bar.updateComplete;
+    const chips = [...bar.shadowRoot!.querySelectorAll<HTMLElement>('.chip')];
+
+    await expect(chips[0].getAttribute('data-tone')).toBe('danger');
+    await expect(chips[0].querySelector('.chip-value')?.textContent?.trim()).toBe('54¢');
+    await expect(chips[0].querySelector('.warn-badge')?.textContent?.trim()).toBe('DW');
+    await expect(chips[0].querySelector('.chip-badge')).not.toBeNull();
+
+    await expect(chips[1].getAttribute('data-tone')).toBe('danger');
+    await expect(chips[1].querySelector('.chip-value')?.textContent?.trim()).toBe('-3¢');
   },
 };

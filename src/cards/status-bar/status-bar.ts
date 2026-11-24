@@ -9,8 +9,10 @@ import {
 
 export type {
   ChipAction,
+  ChipBadgeView,
   ChipTapActionKind,
   ChipTone,
+  StatusBarChipBadgeConfig,
   StatusBarChipConfig,
   StatusBarConfig,
   TimeFormat,
@@ -76,6 +78,7 @@ export class StatusBar extends LitElement {
     for (const chip of this._config.chips ?? []) {
       if (chip.entity) watched.push(chip.entity);
       if (chip.secondary_entity) watched.push(chip.secondary_entity);
+      if (chip.warn_entity) watched.push(chip.warn_entity);
     }
     return watched.some((id) => previous.states[id] !== this.hass!.states[id]);
   }
@@ -119,6 +122,12 @@ export class StatusBar extends LitElement {
       ${chip.label ? html`<span class="chip-label">${chip.label}</span>` : nothing}
       ${chip.label && chip.value ? html`<span class="chip-sep" aria-hidden="true">·</span>` : nothing}
       ${chip.value ? html`<span class="chip-value">${chip.value}</span>` : nothing}
+      ${chip.warnBadge ? html`<span class="warn-badge">${chip.warnBadge}</span>` : nothing}
+      ${chip.badge?.kind === 'icon'
+        ? html`<ha-icon class="chip-badge" .icon=${chip.badge.icon}></ha-icon>`
+        : chip.badge?.kind === 'text'
+          ? html`<span class="chip-badge-muted">${chip.badge.text}</span>`
+          : nothing}
     `;
 
     if (chip.action.kind === 'none') {
@@ -170,6 +179,7 @@ export class StatusBar extends LitElement {
       display: block;
       --tone-ok: #2e9e5b;
       --tone-warn: #f59e0b;
+      --tone-danger: #ef4444;
     }
 
     .bar {
@@ -292,6 +302,13 @@ export class StatusBar extends LitElement {
       border-color: color-mix(in srgb, var(--tone) 38%, transparent);
     }
 
+    .chip[data-tone='danger'] {
+      --tone: var(--tone-danger);
+      color: color-mix(in srgb, var(--tone) 82%, var(--primary-text-color));
+      background: color-mix(in srgb, var(--tone) 18%, transparent);
+      border-color: color-mix(in srgb, var(--tone) 42%, transparent);
+    }
+
     .chip-label {
       font-weight: 600;
     }
@@ -302,6 +319,30 @@ export class StatusBar extends LitElement {
 
     .chip-value {
       font-variant-numeric: tabular-nums;
+    }
+
+    .warn-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 1px 5px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 700;
+      line-height: 1.3;
+      letter-spacing: 0.03em;
+      background: color-mix(in srgb, var(--tone, var(--tone-warn)) 24%, transparent);
+      border: 1px solid color-mix(in srgb, var(--tone, var(--tone-warn)) 45%, transparent);
+    }
+
+    .chip-badge {
+      --mdc-icon-size: 13px;
+      opacity: 0.85;
+    }
+
+    .chip-badge-muted {
+      font-size: 10px;
+      font-weight: 500;
+      opacity: 0.65;
     }
   `;
 }

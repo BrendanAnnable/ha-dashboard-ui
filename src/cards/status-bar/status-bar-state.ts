@@ -1,21 +1,38 @@
 import type { Hass, HassEntity } from '../../core/hass';
 
 export type TimeFormat = '12h' | '24h';
-export type ChipTone = 'default' | 'ok' | 'warn';
+export type ChipTone = 'default' | 'ok' | 'warn' | 'danger';
 export type ChipTapActionKind = 'more-info' | 'toggle' | 'none';
+
+export interface StatusBarChipBadgeConfig {
+  attribute: string;
+  equals: unknown;
+  icon?: string;
+  else_text?: string;
+}
 
 export interface StatusBarChipConfig {
   label?: string;
   entity?: string;
+  value_attribute?: string;
   secondary_entity?: string;
   icon?: string;
   unit?: string;
+  scale?: number;
   decimals?: number;
   secondary_decimals?: number;
   ok_state?: string;
+  ok_above?: number;
+  ok_below?: number;
   warn_state?: string;
   warn_above?: number;
   warn_below?: number;
+  warn_entity?: string;
+  warn_badge?: string;
+  danger_state?: string;
+  danger_above?: number;
+  danger_below?: number;
+  badge?: StatusBarChipBadgeConfig;
   navigate_path?: string;
   tap_action?: ChipTapActionKind;
 }
@@ -34,12 +51,18 @@ export type ChipAction =
   | { kind: 'toggle'; entityId: string }
   | { kind: 'none' };
 
+export type ChipBadgeView =
+  | { kind: 'icon'; icon: string }
+  | { kind: 'text'; text: string };
+
 export interface StatusBarChipView {
   label: string;
   value: string;
   text: string;
   icon?: string;
   tone: ChipTone;
+  warnBadge?: string;
+  badge?: ChipBadgeView;
   action: ChipAction;
 }
 
@@ -59,6 +82,7 @@ export interface StatusBarState {
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] as const;
 const UNAVAILABLE_STATES = new Set(['unavailable', 'unknown']);
+const TIGHT_UNITS = new Set(['%', '°', '¢']);
 
 const WEATHER_ICONS: Record<string, string> = {
   'clear-night': 'mdi:weather-night',
@@ -99,26 +123,96 @@ export function weatherIcon(condition: string | undefined): string {
   return (condition && WEATHER_ICONS[condition]) || 'mdi:weather-partly-cloudy';
 }
 
-function parseNumeric(value: string | undefined): number | undefined {
-  if (!value || value.trim() === '') return undefined;
+function readAttributePath(attributes: Record<string, unknown>, path: string): unknown {
+  if (!path) return undefined;
+  if (Object.prototype.hasOwnProperty.call(attributes, path)) {
+    return attributes[path];
+  }
+  let current: unknown = attributes;
+  for (const segment of path.split('.')) {
+    if (current === null || current === undefined) return undefined;
+    if (Array.isArray(current)) {
+      if (!/^\d+$/.test(segment)) return undefined;
+      current = current[Number(segment)];
+    } else if (typeof current === 'object') {
+      current = (current as Record<string, unknown>)[segment];
+    } else {
+      return undefined;
+    }
+  }
+  return current;
+}
+
+function parseNumeric(value: unknown): number | undefined {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
+  if (typeof value !== 'string' || value.trim() === '') return undefined;
   const n = Number(value);
   return Number.isFinite(n) ? n : undefined;
 }
 
-function attachUnit(value: string, unit: string): string {
-  if (!unit) return value;
-  return unit === '%' || unit === '°' ? `${value}${unit}` : `${value} ${unit}`;
+function applyScale(value: number, scale: number | undefined): number {
+  if (scale === undefined) return value;
+  const scaled = value * scale;
+  return Number.isFinite(scaled) ? Number(scaled.toPrecision(12)) : scaled;
 }
 
-function formatEntityValue(
+function attachUnit(value: string, unit: string): string {
+  if (!unit) return value;
+  return TIGHT_UNITS.has(unit) ? `${value}${unit}` : `${value} ${unit}`;
+}
+
+interface ResolvedValue {
+  rawText: string;
+  fromAttribute: boolean;
+  numeric?: number;
+}
+
+function resolveRawValue(
+  stateObj: HassEntity | undefined,
+  valueAttribute?: string,
+  scale?: number,
+): ResolvedValue | undefined {
+  if (!stateObj || UNAVAILABLE_STATES.has(stateObj.state)) return undefined;
+
+  let raw: unknown = stateObj.state;
+  let fromAttribute = false;
+  if (valueAttribute) {
+    const attrValue = readAttributePath(stateObj.attributes, valueAttribute);
+    if (attrValue !== undefined && attrValue !== null) {
+      raw = attrValue;
+      fromAttribute = true;
+    }
+  }
+
+  const parsed = parseNumeric(raw);
+  const numeric = parsed !== undefined ? applyScale(parsed, scale) : undefined;
+  return {
+    rawText: String(raw),
+    fromAttribute,
+    numeric,
+  };
+}
+
+function formatNumber(numeric: number, rawText: string, options: { decimals?: number; scale?: number }): string {
+  if (options.decimals !== undefined) {
+    const rounded = numeric.toFixed(options.decimals);
+    return Number(rounded) === 0 ? (0).toFixed(options.decimals) : rounded;
+  }
+  if (options.scale !== undefined) {
+    return String(Object.is(numeric, -0) ? 0 : numeric);
+  }
+  return rawText;
+}
+
+function formatResolvedValue(
   hass: Hass,
   stateObj: HassEntity | undefined,
-  options: { unit?: string; decimals?: number },
+  resolved: ResolvedValue | undefined,
+  options: { unit?: string; decimals?: number; scale?: number },
 ): string {
-  if (!stateObj || UNAVAILABLE_STATES.has(stateObj.state)) return '—';
-  const numeric = parseNumeric(stateObj.state);
-  if (numeric !== undefined) {
-    const numberText = options.decimals !== undefined ? numeric.toFixed(options.decimals) : stateObj.state;
+  if (!resolved || !stateObj) return '—';
+  if (resolved.numeric !== undefined) {
+    const numberText = formatNumber(resolved.numeric, resolved.rawText, options);
     const unit =
       options.unit ??
       (typeof stateObj.attributes.unit_of_measurement === 'string'
@@ -126,24 +220,67 @@ function formatEntityValue(
         : '');
     return attachUnit(numberText, unit);
   }
-  return (
-    hass.formatEntityState?.(stateObj) ??
-    (stateObj.state.charAt(0).toUpperCase() + stateObj.state.slice(1))
-  );
+  if (!resolved.fromAttribute && hass.formatEntityState) {
+    return hass.formatEntityState(stateObj);
+  }
+  return resolved.rawText.charAt(0).toUpperCase() + resolved.rawText.slice(1);
 }
 
-function resolveTone(stateObj: HassEntity | undefined, chip: StatusBarChipConfig): ChipTone {
-  if (!stateObj || UNAVAILABLE_STATES.has(stateObj.state)) return 'default';
-  if (chip.warn_state !== undefined && stateObj.state === chip.warn_state) return 'warn';
-
-  const numeric = parseNumeric(stateObj.state);
+function matchesThreshold(
+  rawText: string,
+  numeric: number | undefined,
+  stateMatch?: string,
+  above?: number,
+  below?: number,
+): boolean {
+  if (stateMatch !== undefined && rawText === stateMatch) return true;
   if (numeric !== undefined) {
-    if (chip.warn_above !== undefined && numeric > chip.warn_above) return 'warn';
-    if (chip.warn_below !== undefined && numeric < chip.warn_below) return 'warn';
+    if (above !== undefined && numeric > above) return true;
+    if (below !== undefined && numeric < below) return true;
   }
+  return false;
+}
 
-  if (chip.ok_state !== undefined && stateObj.state === chip.ok_state) return 'ok';
+function resolveTone(
+  resolved: ResolvedValue | undefined,
+  chip: StatusBarChipConfig,
+  warnEntityOn: boolean,
+): ChipTone {
+  if (
+    resolved &&
+    matchesThreshold(resolved.rawText, resolved.numeric, chip.danger_state, chip.danger_above, chip.danger_below)
+  ) {
+    return 'danger';
+  }
+  if (
+    warnEntityOn ||
+    (resolved &&
+      matchesThreshold(resolved.rawText, resolved.numeric, chip.warn_state, chip.warn_above, chip.warn_below))
+  ) {
+    return 'warn';
+  }
+  if (
+    resolved &&
+    matchesThreshold(resolved.rawText, resolved.numeric, chip.ok_state, chip.ok_above, chip.ok_below)
+  ) {
+    return 'ok';
+  }
   return 'default';
+}
+
+function resolveBadge(
+  stateObj: HassEntity | undefined,
+  badge: StatusBarChipBadgeConfig | undefined,
+): ChipBadgeView | undefined {
+  if (!stateObj || !badge) return undefined;
+  const value = readAttributePath(stateObj.attributes, badge.attribute);
+  if (value === badge.equals) {
+    return badge.icon ? { kind: 'icon', icon: badge.icon } : undefined;
+  }
+  if (value !== undefined) {
+    return badge.else_text ? { kind: 'text', text: badge.else_text } : undefined;
+  }
+  return undefined;
 }
 
 function resolveAction(chip: StatusBarChipConfig): ChipAction {
@@ -155,24 +292,37 @@ function resolveAction(chip: StatusBarChipConfig): ChipAction {
 
 function buildChip(hass: Hass, chip: StatusBarChipConfig): StatusBarChipView {
   const primaryState = chip.entity ? hass.states[chip.entity] : undefined;
+  const primaryResolved = resolveRawValue(primaryState, chip.value_attribute, chip.scale);
   const primary = chip.entity
-    ? formatEntityValue(hass, primaryState, { unit: chip.unit, decimals: chip.decimals })
+    ? formatResolvedValue(hass, primaryState, primaryResolved, {
+        unit: chip.unit,
+        decimals: chip.decimals,
+        scale: chip.scale,
+      })
     : '';
 
+  const secondaryState = chip.secondary_entity ? hass.states[chip.secondary_entity] : undefined;
   const secondary = chip.secondary_entity
-    ? formatEntityValue(hass, hass.states[chip.secondary_entity], { decimals: chip.secondary_decimals })
+    ? formatResolvedValue(hass, secondaryState, resolveRawValue(secondaryState), {
+        decimals: chip.secondary_decimals,
+      })
     : '';
 
   const value = primary && secondary ? `${primary} · ${secondary}` : primary || secondary;
   const label = chip.label ?? '';
   const text = label && value ? `${label} · ${value}` : label || value;
+  const warnEntityOn = Boolean(chip.warn_entity && hass.states[chip.warn_entity]?.state === 'on');
+  const warnBadge = warnEntityOn && chip.warn_badge ? chip.warn_badge : undefined;
+  const badge = resolveBadge(primaryState, chip.badge);
 
   return {
     label,
     value,
     text,
     icon: chip.icon,
-    tone: resolveTone(primaryState, chip),
+    tone: resolveTone(primaryResolved, chip, warnEntityOn),
+    ...(warnBadge ? { warnBadge } : {}),
+    ...(badge ? { badge } : {}),
     action: resolveAction(chip),
   };
 }

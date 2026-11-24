@@ -234,7 +234,22 @@ chips:
 | `show_clock` | `true` | Show the clock and date on the left |
 | `time_format` | `12h` | `12h` or `24h` |
 | `weather_entity` | — | Optional `weather.*` entity (icon + temperature) |
-| `chips` | `[]` | List of `{ label?, entity?, secondary_entity?, icon?, unit?, decimals?, secondary_decimals?, ok_state?, warn_state?, warn_above?, warn_below?, navigate_path?, tap_action? }` |
+| `chips` | `[]` | List of chip objects (see below) |
+
+Each chip accepts `label`, `entity`, `value_attribute` (dot-separated attribute
+path supporting array indices, e.g. `detailedForecast.0.per_kwh`, falling back
+to `state`), `secondary_entity`, `icon`, `unit` (`%`, `°`, and `¢` attach
+without a space), `scale` (multiplies numeric values before rounding and
+threshold checks), `decimals`, `secondary_decimals`, `navigate_path`, and
+`tap_action` (`more-info`, `toggle`, `none`).
+
+Chip tones (`danger` > `warn` > `ok` > `default`) support `ok_state`,
+`ok_above`, `ok_below`, `warn_state`, `warn_above`, `warn_below`, `warn_entity`
+(warns when `'on'`, with optional inline `warn_badge` tag such as `DW`),
+`danger_state`, `danger_above`, and `danger_below`. Optional trailing `badge`
+(`{ attribute, equals, icon?, else_text? }`) renders `icon` when the entity
+attribute matches `equals` or muted `else_text` when the attribute is defined
+with any other value.
 
 ## Develop
 
